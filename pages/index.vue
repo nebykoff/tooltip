@@ -1,23 +1,34 @@
 <template>
     <div :class="$style.IndexPage">
-        <div :class="$style.room">
+        <div
+            :class="$style.room"
+        >
             <img
                 ref="image"
                 src="/images/bg.jpg"
                 alt=""
-                @load="resizePointsContainer"
             >
             <div
+                ref="parent"
                 :class="$style.points"
-                :style="pointsStyle"
             >
                 <div
                     v-for="(point, idx) in points"
                     :key="`point_${idx}`"
-                    :style="{top: point.coords[0]+'%', left: point.coords[1]+'%'}"
-                    :class="$style.point"
+                    :style="{top: point.coords[1]+'%', left: point.coords[0]+'%'}"
+                    :class="[$style.point, {[$style._active]: activePoint === idx}]"
+                    @click="handlePointClick(idx)"
                 >
                     {{ point.title }}
+
+                    <div
+                        ref="tooltip"
+                        :class="$style.tooltip"
+                    >
+                        Lorem ipsum dolor sit amet, consectetur adipisicing elit. Cumque enim harum
+                        possimus tempore unde. Ea, eos fugiat ipsam iste laudantium quasi qui quod
+                        repellat sint? Doloribus earum error perspiciatis quam!
+                    </div>
                 </div>
             </div>
         </div>
@@ -43,57 +54,52 @@ export default {
                     title: '3',
                     coords: [50, 50],
                 },
+                {
+                    title: '4',
+                    coords: [95, 20],
+                },
+                {
+                    title: '5',
+                    coords: [20, 85],
+                },
             ],
 
-            pointsStyle: {},
+            activePoint: null,
         };
     },
 
-    mounted() {
-        this.$nextTick(() => {
-            window.addEventListener('resize', this.resizePointsContainer);
-        });
-    },
-
-    beforeDestroy() {
-        window.removeEventListener('resize', this.resizePointsContainer);
-    },
-
     methods: {
-        resizePointsContainer() {
-            const img = this.$refs.image;
-            if (img) {
-                const size = this.getObjectFitSize(false, img.width, img.height, img.naturalWidth, img.naturalHeight);
-                this.pointsStyle = {
-                    width: size.width + 'px',
-                    height: size.height + 'px',
-                    left: size.x + 'px',
-                    top: size.y + 'px',
-                };
+        handlePointClick(index) {
+            if (this.activePoint !== null && this.$refs.tooltip[this.activePoint]) {
+                this.$refs.tooltip[this.activePoint].style.transform = 'translate(0, 0)';
             }
-        },
 
-        getObjectFitSize(contains, containerWidth, containerHeight, width, height) {
-            const doRatio = width / height;
-            const cRatio = containerWidth / containerHeight;
-            let targetWidth = 0;
-            let targetHeight = 0;
-            const test = contains ? doRatio > cRatio : doRatio < cRatio;
+            if (index !== this.activePoint) {
+                if (this.$refs.tooltip[index] && this.$refs.parent) {
+                    const tooltipElem = this.$refs.tooltip[index];
+                    const parentRect = this.$refs.parent.getBoundingClientRect();
+                    const tooltipRect = tooltipElem.getBoundingClientRect();
 
-            if (test) {
-                targetWidth = containerWidth;
-                targetHeight = targetWidth / doRatio;
+                    let offsetTop = 0;
+
+                    // Если не влазит снизу
+                    if (tooltipRect.top - parentRect.top + tooltipRect.height > parentRect.height) {
+                        offsetTop = tooltipRect.top - parentRect.top + tooltipRect.height - parentRect.height;
+                    }
+
+                    let offsetLeft = 0;
+
+                    // Если не влазит справа
+                    if (tooltipRect.left + tooltipRect.width > parentRect.left + parentRect.width) {
+                        offsetLeft = 'calc(-100% - 50px)';
+                    }
+
+                    tooltipElem.style.transform = `translate(${offsetLeft}, -${offsetTop}px)`;
+                }
+                this.activePoint = index;
             } else {
-                targetHeight = containerHeight;
-                targetWidth = targetHeight * doRatio;
+                this.activePoint = null;
             }
-
-            return {
-                width: targetWidth,
-                height: targetHeight,
-                x: (containerWidth - targetWidth) / 2,
-                y: (containerHeight - targetHeight) / 2,
-            };
         },
     },
 };
@@ -134,5 +140,29 @@ export default {
         border-radius: 30px;
         background-color: gold;
         cursor: pointer;
+        user-select: none;
+
+        &._active {
+            .tooltip {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: all;
+            }
+        }
+    }
+
+    .tooltip {
+        position: absolute;
+        top: 0;
+        left: 100%;
+        opacity: 0;
+        z-index: 1;
+        visibility: hidden;
+        width: 250px;
+        padding: 16px;
+        border-radius: 4px;
+        background-color: white;
+        pointer-events: none;
+        transition: opacity .3s ease-out;
     }
 </style>
